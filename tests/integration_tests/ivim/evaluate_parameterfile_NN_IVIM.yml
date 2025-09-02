@@ -1,0 +1,74 @@
+experiment:
+  name: 'evaluate_invivo_simulation_IVIM_NN'
+  target_folder: '/ncde/Results/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test: []
+  simulation:
+    train: []
+    validation: []
+    test:
+      - name: 'simulation_SNR5_10'
+        qmri: 'IVIM'
+        SNR: [ 5, 10 ]
+        samples: 200000
+        fixed: true
+        bvalues: [0, 2, 4, 8, 12, 18, 24, 32, 40, 50, 75, 110, 200, 300, 450, 600]
+        seed_nr: 1
+        parameter_ranges:
+          D: [ 0.0003, 0.0035 ]
+          Dp: [ 0.05, 0.2 ]
+          f: [ 0, 0.6 ]
+          S0: [ 0.9, 1.1 ]
+        structured:
+          nb_patients: 20
+          samples_per_patient: 10000
+          shape: [ 10, 10, 100 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+
+preprocessing:
+  utils.data_processing.processors.NormalizeSignals.NormalizeSignals:
+    processing_parameters:
+      xval_threshold: 0.01
+  utils.data_processing.processors.SortSignalOnXval.SortSignalOnXval:
+    processing_parameters: {}
+  utils.data_processing.processors.AverageSignalsOfEqualXvals.AverageSignalsOfEqualXvals:
+    processing_parameters: {}
+  utils.data_processing.processors.SignalCuration.SignalCuration:
+    processing_parameters:
+      qmri_application: 'IVIM'
+
+model:
+  family: 'NN'
+  prediction_function: 'models.NN.prediction.prediction'
+  hidden_channels: 1000
+
+qmri_fit:
+  model: 'IVIM'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    D: [0.0003, 0.0035]
+    Dp: [0.05, 0.2]
+    f: [0, 0.6]
+    S0: [0.9, 1.1]
+
+test:
+  batch_size: 32
+  model_path: '/path/to/my/model.pt'
+
+visualization:
+  qmri.visualization.visualization_functions.store_images_as_nii: { }
+
+metrics:
+  utils.metrics.evaluation_metrics.normalized_RMSE:
+    qmri_model: 'IVIM'
+    range:
+      signals: 1
+      D: 0.0032
+      Dp: 0.15
+      f: 0.6
+      S0: 0.2

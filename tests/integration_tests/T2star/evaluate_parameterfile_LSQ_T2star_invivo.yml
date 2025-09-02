@@ -1,0 +1,47 @@
+experiment:
+  name: 'evaluation_simulation_T2*_LSQ'
+  target_folder: '/ncde/TestResults/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test:
+      - name: 'invivo_study'
+        qmri: 'T2star'
+        path: '/path/to/nii/'
+        patient_ids: [ 2 ]
+        dataloader: 'qmri.data_loading.T2star.load_T2star_data.load_t2star_subject'
+        load_mask: false
+  simulation:
+    train: []
+    validation: []
+    test: []
+
+preprocessing:
+  utils.data_processing.processors.NormalizeSignals.NormalizeSignals:
+    processing_parameters:
+      xval_threshold: 0.005
+  utils.data_processing.processors.SortSignalOnXval.SortSignalOnXval:
+    processing_parameters: {}
+  utils.data_processing.processors.AverageSignalsOfEqualXvals.AverageSignalsOfEqualXvals:
+    processing_parameters: {}
+
+qmri_fit:
+  model: 'T2star'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    S0: [0.5, 2]
+    T2star: [0, 0.2]
+
+model:
+  family: 'LSQ'
+  prediction_function: 'models.classical_fitting.LSQ.prediction.prediction'
+
+test:
+  batch_size: 32
+
+visualization:
+  qmri.visualization.visualization_functions.store_images_as_nii: { }
+
+metrics: {}

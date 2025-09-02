@@ -1,0 +1,70 @@
+experiment:
+  name: 'evaluation_simulation_IVIM_LSQ'
+  target_folder: '/ncde/TestResults/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test: []
+  simulation:
+    train: []
+    validation: []
+    test:
+      - name: 'simulation_SNR5_10'
+        qmri: 'IVIM'
+        SNR: [ 5, 10 ]
+        samples: 2000
+        bvalues:
+          sample_set: [ 1, 5, 10, 20, 25, 40, 50, 60, 70, 80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000 ] # x values are sampled from this set
+          size: [ 4, 10 ] # lower and upper bound of amount of x values in a subset
+        seed_nr: null
+        parameter_ranges:
+          D: [ 0.0003, 0.0035 ]
+          Dp: [ 0.05, 0.2 ]
+          f: [ 0, 0.6 ]
+          S0: [ 0.9, 1.1 ]
+        structured:
+          nb_patients: 2
+          samples_per_patient: 1000
+          shape: [ 10, 10, 10 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+
+preprocessing:
+  utils.data_processing.processors.NormalizeSignals.NormalizeSignals:
+    processing_parameters:
+      xval_threshold: 0.01
+  utils.data_processing.processors.SortSignalOnXval.SortSignalOnXval:
+    processing_parameters: {}
+  utils.data_processing.processors.AverageSignalsOfEqualXvals.AverageSignalsOfEqualXvals:
+    processing_parameters: {}
+
+qmri_fit:
+  model: 'IVIM'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    D: [0.0003, 0.0035]
+    Dp: [0.05, 0.2]
+    f: [0, 0.6]
+    S0: [0.9, 1.1]
+
+model:
+  family: 'LSQ'
+  prediction_function: 'models.classical_fitting.LSQ.prediction.prediction'
+
+test:
+  batch_size: 32
+
+visualization:
+  qmri.visualization.visualization_functions.store_images_as_nii: { }
+
+metrics:
+  utils.metrics.evaluation_metrics.normalized_RMSE:
+    qmri_model: 'IVIM'
+    range:
+      signals: 1
+      D: 0.0032
+      Dp: 0.15
+      f: 0.6
+      S0: 0.2

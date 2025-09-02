@@ -1,0 +1,107 @@
+experiment:
+  name: 'train_simulation_VFA'
+  target_folder: '/ncde/TestResults/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test: []
+  simulation:
+    train: []
+    validation:
+      - name: 'simulation_val'
+        qmri: 'VFA'
+        SNR: [50, 500]
+        samples: 5000
+        flip_angles:
+          sample_set: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, ] # x values are sampled from this set
+          size: [26, 27] # lower and upper bound of amount of x values in a subset
+        seed_nr: null
+        parameter_ranges:
+          M0: [0.9, 1.1]
+          T1: [100, 3000]
+          TR: [4, 7]
+        structured:
+          nb_patients: 5
+          samples_per_patient: 1000
+          shape: [ 10, 10, 10 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+    test: []
+
+preprocessing:
+  - utils.data_processing.processors.SortSignalOnXval.SortSignalOnXval:
+      processing_parameters: {}
+  - utils.data_processing.processors.AverageSignalsOfEqualXvals.AverageSignalsOfEqualXvals:
+      processing_parameters: {}
+  - utils.data_processing.processors.NormalizeVFASignal.LFANormalizeVFASignal:
+      processing_parameters:
+        lower_limit: 0.0001
+        upper_limit: 100000
+  - utils.data_processing.processors.SignalCuration.SignalCuration:
+      processing_parameters:
+        qmri_application: 'VFA'
+
+model:
+  family: 'NCDE'
+  train_function: 'models.NCDE.train.train_NCDE'
+  input_channels: 3
+  hidden_channels: 1000
+  initial_type: 'Initial'
+  initial:
+    input_channels: 3
+    hidden_channels: 1000
+  CDE:
+    atol: 0.00001 #adaptive solver absolute error tolerance
+    rtol: 0.001 #adaptive solver relative error tolerance
+    hidden_channels: 1000
+    scheduler:
+      milestones: [300, 400, 500, 600]
+      gamma: 0.5
+  readout_type: 'Readout'
+  readout:
+    input_channels: 1000
+    hidden_channels: 1000
+    output_channels: 2
+    use_batchnorm: true
+    dropout: 0
+    depth: 6
+    parallel: true
+  parallel: false
+  parallel_models: 1
+  pretrained: false
+  pretrained_model_path: null
+
+qmri_fit:
+  model: 'VFA'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    M0: [0.01, 1.99]
+    T1: [100, 3000]
+    TR: [4, 7]
+
+training:
+  intensity_weighted: false
+  parameter_loss_fraction: 0
+  model_checkpoint_interval: 10
+  batch_size: 64
+  epochs: 750
+  scheduler:
+    milestones: [250, 350, 450, 550, 650]
+    gamma: 0.5
+  steps_per_epoch: 100
+  learning_rate: 0.000025
+  optimizer: 'Adam'
+  loss: 'MSE'
+  metrics:
+    utils.metrics.train_metrics.RMSE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.MSE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.MAE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.Bias: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.Variance: {'parameters': {'normalization_method': null}}
+
+validation:
+  validation_steps: 100
+  batch_size: 50
+

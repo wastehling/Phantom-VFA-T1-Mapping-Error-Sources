@@ -1,0 +1,62 @@
+experiment:
+  name: 'evaluation_invivo_IVIM_NCDE_invivo'
+  target_folder: '/ncde/TestResults/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test:
+      - name: 'invivo_study'
+        qmri: 'IVIM'
+        path: '/path/to/your/study/IVIM/'
+        patient_ids: [ 1 ]
+        dataloader: 'qmri.data_loading.ivim.load_ivim_data.load_ivim_subject'
+        load_mask: false
+  simulation:
+    train: []
+    validation: []
+    test: []
+
+preprocessing:
+  utils.data_processing.processors.NormalizeSignals.NormalizeSignals:
+    processing_parameters:
+      xval_threshold: 0.01
+  utils.data_processing.processors.SortSignalOnXval.SortSignalOnXval:
+    processing_parameters: {}
+  utils.data_processing.processors.AverageSignalsOfEqualXvals.AverageSignalsOfEqualXvals:
+    processing_parameters: {}
+
+model:
+  family: 'NCDE'
+  prediction_function: 'models.NCDE.prediction.prediction'
+  hidden_channels: 20
+  CDE:
+    atol: 0.00000125
+    rtol: 0.000125
+
+qmri_fit:
+  model: 'IVIM'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    D: [0.0003, 0.0035]
+    Dp: [0.05, 0.2]
+    f: [0, 0.6]
+    S0: [0.9, 1.1]
+
+test:
+  batch_size: 32
+  model_path: '/path/to/my/model.pt'
+
+visualization:
+  qmri.visualization.visualization_functions.store_images_as_nii: { }
+
+metrics:
+  utils.metrics.evaluation_metrics.normalized_RMSE:
+    qmri_model: 'IVIM'
+    range:
+      signals: 1
+      D: 0.0032
+      Dp: 0.15
+      f: 0.6
+      S0: 0.2

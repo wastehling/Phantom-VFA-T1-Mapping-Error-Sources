@@ -1,0 +1,167 @@
+experiment:
+  name: 'train_simulation_DCE_NCDE'
+  target_folder: '/ncde/TestResults/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test: []
+  simulation:
+    train:
+      - name: 'simulation_SNR20_30'
+        qmri: 'DCE'
+        SNR: [20, 30]
+        samples: 200000
+        acquisition:
+          S0: 1000
+          r1: 5.0
+          TR: 0.0032  # 7.2e-3 in ms for the new toolbox
+          FA1: 0.07  # 4./180*3.14159
+          FA2: 0.349  # 24./180*3.14159
+          nr_of_measurements_range: [15,20]
+        aif:
+          Hct: 0.40
+          aif:
+            ab: 7.9785
+            ae: 0.5216
+            ar: 0.0482
+            mb: 32.8855
+            me: 0.1811
+            mm: 9.1868
+            mr: 15.8167
+            t0: 0
+            tr: 0.2533
+        timepoints:
+          temporal_resolution_range: [8, 12]
+        noise_method: 'parameter_dependent'
+        seed_nr: null
+        parameter_ranges:
+          ke: [0.1, 2]
+          ve: [0.01, 0.7]
+          vp: [0.001, 0.05]
+          r1: [0.5, 0.333]
+          dt: [0.01, 1]
+        structured:
+          nb_patients: 2000
+          samples_per_patient: 100
+          shape: [ 1, 10, 10 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+    validation:
+      - name: 'simulation_SNR30_50'
+        qmri: 'DCE'
+        SNR: [30, 50]
+        samples: 5000
+        acquisition:
+          S0: 1000
+          r1: 5.0
+          TR: 0.0032  # 7.2e-3 in ms for the new toolbox
+          FA1: 0.07  # 4./180*3.14159
+          FA2: 0.349  # 24./180*3.14159
+          nr_of_measurements_range: [15,20]
+        aif:
+          Hct: 0.40
+          aif:
+            ab: 7.9785
+            ae: 0.5216
+            ar: 0.0482
+            mb: 32.8855
+            me: 0.1811
+            mm: 9.1868
+            mr: 15.8167
+            t0: 0
+            tr: 0.2533
+        timepoints:
+          temporal_resolution_range: [8, 12]
+        noise_method: 'parameter_dependent'
+        seed_nr: null
+        parameter_ranges:
+          ke: [0.1, 2]
+          ve: [0.01, 0.7]
+          vp: [0.001, 0.05]
+          r1: [0.5, 0.333]
+          dt: [0.01, 1]
+        structured:
+          nb_patients: 5
+          samples_per_patient: 1000
+          shape: [ 10, 10, 10 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+    test: []
+
+preprocessing: {}
+
+model:
+  family: 'NCDE'
+  train_function: 'models.NCDE.train.train_NCDE'
+  input_channels: 3
+  hidden_channels: 1000
+  output_channels: 3
+  initial_type: 'Initial'
+  initial:
+    input_channels: 3
+    hidden_channels: 1000
+  CDE:
+    atol: 0.00001 #adaptive solver absolute error tolerance
+    rtol: 0.001 #adaptive solver relative error tolerance
+    hidden_channels: 1000
+    scheduler:
+      milestones: [300, 400, 500, 600]
+      gamma: 0.5
+  readout_type: 'Readout'
+  readout:
+    input_channels: 1000
+    hidden_channels: 1000
+    output_channels: 4
+    use_batchnorm: true
+    dropout: 0
+    depth: 6
+    parallel: true
+  pretrained: false
+  pretrained_model_path: null
+
+qmri_fit:
+  model: 'DCE'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    ke: [0.1, 2]
+    ve: [0.01, 0.7]
+    vp: [0.001, 0.05]
+    dt: [0.01, 1]
+  aif:
+    Hct: 0.40
+    aif:
+      ab: 7.9785
+      ae: 0.5216
+      ar: 0.0482
+      mb: 32.8855
+      me: 0.1811
+      mm: 9.1868
+      mr: 15.8167
+      t0: 0
+      tr: 0.2533
+
+training:
+  intensity_weighted: true
+  parameter_loss_fraction: 0.5
+  model_checkpoint_interval: 25
+  batch_size: 64
+  epochs: 750
+  scheduler:
+    milestones: [250, 350, 450, 550, 650]
+    gamma: 0.5
+  steps_per_epoch: 100
+  learning_rate: 0.0001
+  optimizer: 'Adam'
+  loss: 'MSE'
+  metrics:
+    utils.metrics.train_metrics.RMSE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.MSE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.MAE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.Bias: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.Variance: {'parameters': {'normalization_method': null}}
+
+validation:
+  validation_steps: 10
+  batch_size: 32

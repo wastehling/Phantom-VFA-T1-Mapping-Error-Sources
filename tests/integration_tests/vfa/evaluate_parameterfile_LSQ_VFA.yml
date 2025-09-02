@@ -1,0 +1,74 @@
+experiment:
+  name: 'evaluation_VFA_LSQ'
+  target_folder: '/ncde/TestResults/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test: []
+  simulation:
+    train: []
+    validation: []
+    test:
+      - name: 'simulation_M0NR150_200'
+        qmri: 'VFA'
+        SNR: [ 150, 200 ]
+        samples: 250000
+        flip_angles:
+          sample_set: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, ] # x values are sampled from this set
+          size: [ 27, 28 ] # lower and upper bound of amount of x values in a subset
+        seed_nr: 1
+        parameter_ranges:
+          M0: [ 0.9, 1.1 ]
+          T1: [ 100, 3000 ]
+          TR: [ 4, 7 ]
+        structured:
+          nb_patients: 25
+          samples_per_patient: 10000
+          shape: [ 10, 10, 100 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+
+preprocessing:
+  utils.data_processing.processors.SortSignalOnXval.SortSignalOnXval:
+    processing_parameters: {}
+  utils.data_processing.processors.DropRandomMeasurements.DropRandomMeasurements:
+    processing_parameters:
+      nr_measurements: [6]
+      probability: 1
+  utils.data_processing.processors.AverageSignalsOfEqualXvals.AverageSignalsOfEqualXvals:
+    processing_parameters: {}
+  utils.data_processing.processors.NormalizeVFASignal.LFANormalizeVFASignal:
+    processing_parameters:
+      lower_limit: 0.0001
+      upper_limit: 100000
+  utils.data_processing.processors.SignalCuration.SignalCuration:
+    processing_parameters:
+      qmri_application: 'VFA'
+
+qmri_fit:
+  model: 'VFA'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    M0: [0.01, 1.99]
+    T1: [100, 3000]
+    TR: [4, 7]
+
+test:
+  batch_size: 32
+
+visualization:
+  qmri.visualization.visualization_functions.store_images_as_nii: { }
+
+metrics:
+  utils.metrics.evaluation_metrics.normalized_RMSE:
+    qmri_model: 'VFA'
+    range:
+      signals: 1
+      M0: 10000
+      T1: 2900
+
+model:
+  family: 'LSQ'
+  prediction_function: 'models.classical_fitting.LSQ.prediction.prediction'

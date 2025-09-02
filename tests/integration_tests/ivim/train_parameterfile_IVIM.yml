@@ -1,0 +1,144 @@
+experiment:
+  name: 'train_invivo_simulation_IVIM_NCDE'
+  target_folder: '/ncde/TestResults/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test: []
+  simulation:
+    train:
+      - name: 'simulation_SNR5_10'
+        qmri: 'IVIM'
+        SNR: [ 5, 10 ]
+        samples: 2000
+        bvalues:
+          sample_set: [ 1, 5, 10, 20, 25, 40, 50, 60, 70, 80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000 ] # x values are sampled from this set
+          size: [ 4, 10 ] # lower and upper bound of amount of x values in a subset
+        seed_nr: null
+        parameter_ranges:
+          D: [ 0.0003, 0.0035 ]
+          Dp: [ 0.05, 0.2 ]
+          f: [ 0, 0.6 ]
+          S0: [ 0.9, 1.1 ]
+        structured:
+          nb_patients: 2
+          samples_per_patient: 1000
+          shape: [ 10, 10, 10 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+      - name: 'simulation_SNR50_100'
+        qmri: 'IVIM'
+        SNR: [ 50, 100 ]
+        samples: 2000
+        bvalues:
+          sample_set: [ 1, 5, 10, 20, 25, 40, 50, 60, 70, 80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000 ] # x values are sampled from this set
+          size: [ 4, 10 ] # lower and upper bound of amount of x values in a subset
+        seed_nr: null
+        parameter_ranges:
+          D: [ 0.0003, 0.0035 ]
+          Dp: [ 0.05, 0.2 ]
+          f: [ 0, 0.6 ]
+          S0: [ 0.9, 1.1 ]
+        structured:
+          nb_patients: 2
+          samples_per_patient: 1000
+          shape: [ 10, 10, 10 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+    validation:
+      - name: 'simulation_val'
+        qmri: 'IVIM'
+        SNR: [ 30, 50 ]
+        samples: 5000
+        bvalues:
+          sample_set: [ 1, 5, 10, 20, 25, 40, 50, 60, 70, 80, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750,
+                        800, 850, 900, 950, 1000 ] # x values are sampled from this set
+          size: [ 4, 8 ] # lower and upper bound of amount of x values in a subset
+        seed_nr: null
+        parameter_ranges:
+          D: [ 0.0003, 0.0035 ]
+          Dp: [ 0.05, 0.2 ]
+          f: [ 0, 0.6 ]
+          S0: [ 0.9, 1.1 ]
+        structured:
+          nb_patients: 5
+          samples_per_patient: 1000
+          shape: [ 10, 10, 10 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+    test: []
+
+preprocessing:
+  utils.data_processing.processors.NormalizeSignals.NormalizeSignals:
+    processing_parameters:
+      xval_threshold: 0.01
+  utils.data_processing.processors.SortSignalOnXval.SortSignalOnXval:
+    processing_parameters: {}
+  utils.data_processing.processors.AverageSignalsOfEqualXvals.AverageSignalsOfEqualXvals:
+    processing_parameters: {}
+  utils.data_processing.processors.SignalCuration.SignalCuration:
+    processing_parameters:
+      qmri_application: 'IVIM'
+
+model:
+  family: 'NCDE'
+  train_function: 'models.NCDE.train.train_NCDE'
+  initial_type: 'Initial'
+  initial:
+    input_channels: 3
+    hidden_channels: 1000
+  CDE:
+    atol: 0.00001 #adaptive solver absolute error tolerance
+    rtol: 0.001 #adaptive solver relative error tolerance
+    hidden_channels: 1000
+    scheduler:
+      milestones: [300, 400, 500, 600]
+      gamma: 0.5
+  readout_type: 'Readout'
+  readout:
+    input_channels: 1000
+    hidden_channels: 1000
+    output_channels: 4
+    use_batchnorm: true
+    dropout: 0
+    depth: 6
+    parallel: true
+  coefficient_interpolation: 'hermite_cubic_coefficients'
+  pretrained: false
+  pretrained_model_path: null
+
+qmri_fit:
+  model: 'IVIM'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    D: [0.0003, 0.0035]
+    Dp: [0.05, 0.2]
+    f: [0, 0.6]
+    S0: [0.9, 1.1]
+
+training:
+  intensity_weighted: false
+  parameter_loss_fraction: 1
+  model_checkpoint_interval: 50
+  batch_size: 64
+  epochs: 750
+  scheduler:
+    milestones: [250, 350, 450, 550, 650]
+    gamma: 0.5
+  steps_per_epoch: 3
+  learning_rate: 0.0001
+  optimizer: 'Adam'
+  loss: 'MSE'
+  metrics:
+    utils.metrics.train_metrics.RMSE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.MSE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.MAE: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.Bias: {'parameters': {'normalization_method': null}}
+    utils.metrics.train_metrics.Variance: {'parameters': {'normalization_method': null}}
+
+validation:
+  validation_steps: 3
+  batch_size: 32
+

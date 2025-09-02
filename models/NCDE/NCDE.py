@@ -1,0 +1,159 @@
+"""
+This implementation is inspired by examples from torchcde
+# (https://github.com/patrick-kidger/torchcde), licensed under Apache 2.0.
+"""
+
+import torch
+import torchcde
+
+from models.NCDE.initial import Initial
+from models.NCDE.readout import Readout
+
+
+class CDEFunc(torch.nn.Module):
+    """
+    class dedicated to the function used for approximating the DE
+    """
+    def __init__(self, input_channels, hidden_channels):
+        """
+        Constructor for the CDEFunc class
+        Args:
+            input_channels: is the number of input channels in the data X. (Determined by the data.)
+            hidden_channels: is the number of channels for z_t. (Determined by you!)
+        """
+
+        super(CDEFunc, self).__init__()
+        self.input_channels = input_channels
+        self.hidden_channels = hidden_channels
+
+        self.linear1 = torch.nn.Linear(hidden_channels, 128)
+        self.linear2 = torch.nn.Linear(128, 256)
+        self.linear3 = torch.nn.Linear(256, 512)
+        self.linear4 = torch.nn.Linear(512, 256)
+        self.linear5 = torch.nn.Linear(256, 128)
+        self.linear6 = torch.nn.Linear(128, input_channels * hidden_channels)
+
+    ######################
+    # For most purposes the t argument can probably be ignored; unless you want your CDE to behave differently at
+    # different times, which would be unusual. But it's there if you need it!
+    ######################
+    def forward(self, t, z):
+        """
+        forward pass of the CDEFunc
+        Args:
+            t: timepoint, mostly ununused
+            z: hidden state
+
+        Returns:
+            z: hidden state
+
+        """
+        # z has shape (batch, hidden_channels)
+        z = self.linear1(z)
+        z = z.relu()
+        z = self.linear2(z)
+        z = z.relu()
+        z = self.linear3(z)
+        z = z.relu()
+        z = self.linear4(z)
+        z = z.relu()
+        z = self.linear5(z)
+        z = z.relu()
+        z = self.linear6(z)
+
+        ######################
+        # Easy-to-forget gotcha: Best results tend to be obtained by adding a final tanh nonlinearity.
+        ######################
+        z = z.tanh()
+        ######################
+        # Ignoring the batch dimension, the shape of the output tensor must be a matrix,
+        # because we need it to represent a linear map from R^input_channels to R^hidden_channels.
+        ######################
+        z = z.view(z.size(0), self.hidden_channels, self.input_channels)
+        return z
+
+
+######################
+# Next, we need to package CDEFunc up into a model that computes the integral.
+######################
+class NeuralCDE(torch.nn.Module):
+    """
+    class for constructing a neural CDE
+    """
+    def __init__(self, input_channels, parameters={}, device=None,
+                 interpolation="cubic"):
+        """
+        Constructor for the NeuralCDE class
+        Args:
+            input_channels: number of input channels
+            parameters: parameters
+            device: device on which to run the computation, either cuda or cpu
+            interpolation: "cubic" or "linear" interpolation to construct the continuous input path
+        """
+        assert parameters, "Parameters are required for NeuralCDE"
+
+        super(NeuralCDE, self).__init__()
+
+        self.func = CDEFunc(input_channels, parameters['model']['CDE']['hidden_channels'])
+
+        if parameters['model']['initial_type'] == 'Initial':
+            self.initial = Initial(parameters)
+        else:
+            raise NotImplementedError("Only Initial initial type is implemented")
+
+        if parameters['model']['readout_type'] == 'Readout':
+            self.readout = Readout(parameters, device)
+        else:
+            raise NotImplementedError("Only Readout readout type is implemented")
+
+        self.interpolation = interpolation
+
+    def forward(self, coeffs, atol=None, rtol=None):
+        """
+        forward pass of the NeuralCDE
+        Args:
+            coeffs: interpolation coefficients
+            atol: absolute tolerance of the ODE solver
+            rtol: relative tolerance of the ODE solver
+
+        Returns:
+            pred_y: predicted y
+        """
+        kwargs = {}
+
+        if self.interpolation == 'cubic':
+            X = torchcde.CubicSpline(coeffs)
+        elif self.interpolation == 'linear':
+            X = torchcde.LinearInterpolation(coeffs)
+        else:
+            raise ValueError("Only 'linear' and 'cubic' interpolation methods are implemented.")
+
+        ######################
+        # Easy to forget gotcha: Initial hidden state should be a function of the first observation.
+        ######################
+        X0 = X.evaluate(X.interval[0])
+        z0 = self.initial(X0)
+
+        if atol is not None:
+            kwargs['atol'] = atol
+
+        if rtol is not None:
+            kwargs['rtol'] = rtol
+
+        ######################
+        # Actually solve the CDE.
+        ######################
+        z_T = torchcde.cdeint(X=X,
+                              z0=z0,
+                              func=self.func,
+                              t=X.interval,
+                              **kwargs)
+
+        ######################
+        # Both the initial value and the terminal value are returned from cdeint; extract just the terminal value,
+        # and then apply a linear map.
+        ######################
+        z_T = z_T[:, 1]
+        pred_y = self.readout(z_T)
+        return pred_y
+

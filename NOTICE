@@ -1,0 +1,60 @@
+NeuralCDE-QMRI
+Copyright 2025 Daan Kuppens, Oliver Gurney-Champion
+
+This project incorporates third-party code subject to the following licenses:
+
+---
+
+torchcde
+Copyright 2020 Patrick Kidger and contributors
+Licensed under the Apache License, Version 2.0
+https://github.com/patrick-kidger/torchcde
+
+- Some code in this project is inspired by examples from torchcde.
+- Some code is copied or adapted directly from torchcde and retains its
+  original license terms.
+
+---
+
+IVIMNET
+Copyright 2021 Oliver Champion
+Licensed under the GNU General Public License v3.0
+https://github.com/oliverchampion/IVIMNET
+
+- Some code in this project is copied or adapted directly from IVIMNET and
+  retains its original license terms.
+
+---
+
+DCE-NET
+Copyright 2021 Tim Ottens (Tim096)
+Licensed under the Apache License, Version 2.0
+https://github.com/Tim096/DCE-NET
+
+- Some code in this project is copied or adapted directly from DCE-NET and
+  retains its original license terms.
+
+---
+
+Licenses
+--------
+
+Apache License, Version 2.0
+You may obtain a copy at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+GNU General Public License v3.0
+You may obtain a copy at:
+
+    https://www.gnu.org/licenses/gpl-3.0.en.html
+
+---
+
+Notes
+-----
+
+This project is distributed under the GNU General Public License v3.0.
+Although some components are available under the Apache License 2.0,
+the inclusion of GPL v3.0–licensed code requires that the entire
+combined work be distributed under the terms of the GNU GPL v3.0.

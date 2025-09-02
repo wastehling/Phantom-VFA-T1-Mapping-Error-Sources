@@ -1,0 +1,99 @@
+experiment:
+  name: 'evaluate_simulation_DCE_NCDE'
+  target_folder: 'ncde/TestResults/'
+
+data:
+  in_vivo:
+    train: []
+    validation: []
+    test: []
+  simulation:
+    train: []
+    validation: []
+    test:
+      - name: 'simulation_SNR_5'
+        qmri: 'DCE'
+        SNR: [ 5, 6 ]
+        samples: 200000
+        acquisition:
+          S0: 1000
+          r1: 5.0
+          TR: 0.0032  # 7.2e-3 in ms for the new toolbox
+          FA1: 0.07  # 4./180*3.14159
+          FA2: 0.349  # 24./180*3.14159
+          nr_of_measurements_range: [15,20]
+        aif:
+          Hct: 0.40
+          aif:
+            ab: 7.9785
+            ae: 0.5216
+            ar: 0.0482
+            mb: 32.8855
+            me: 0.1811
+            mm: 9.1868
+            mr: 15.8167
+            t0: 0
+            tr: 0.2533
+        timepoints:
+          temporal_resolution_range: [8, 12]
+        seed: 1
+        parameter_ranges:
+          ke: [0.1, 2]
+          ve: [0.01, 0.7]
+          vp: [0.001, 0.05]
+          r1: [0.5, 0.333]
+          dt: [0.01, 1]
+        structured:
+          nb_patients: 200
+          samples_per_patient: 1000
+          shape: [ 10, 10, 10 ]
+          sort_on_xvals: true
+          sort_on_SNR: true
+
+preprocessing: {}
+
+qmri_fit:
+  model: 'DCE'
+  mapping_method: 'sigmoid'
+  parameter_ranges:
+    ke: [0.1, 2]
+    ve: [0.01, 0.7]
+    vp: [0.001, 0.05]
+    r1: [0.5, 0.333]
+    dt: [0.01, 1]
+  aif:
+    Hct: 0.40
+    aif:
+      ab: 7.9785
+      ae: 0.5216
+      ar: 0.0482
+      mb: 32.8855
+      me: 0.1811
+      mm: 9.1868
+      mr: 15.8167
+      t0: 0
+      tr: 0.2533
+
+visualization:
+  qmri.visualization.visualization_functions.store_images_as_nii: { }
+
+metrics:
+  utils.metrics.evaluation_metrics.normalized_RMSE:
+    qmri_model: 'DCE'
+    range:
+      signals: 1
+      ke: 1.9
+      ve: 0.69
+      vp: 0.049
+      dt: 0.99
+
+model:
+  family: 'NCDE'
+  prediction_function: 'models.NCDE.prediction.prediction'
+  CDE:
+    atol: 0.00000125
+    rtol: 0.000125
+
+test:
+  batch_size: 32
+  model_path: '/path/to/my/model.pt'
