@@ -120,20 +120,21 @@ def fit_least_squares_array_vfa(xvalues, signal, njobs, bounds, TR):
     return [M0, T1]
 
 
-def fit_least_squares_vfa(xvalues, dw_data, bounds, TR):
+def fit_least_squares_vfa(xvalues, dw_data, bounds, TR, p0=(1, 1)):
     """
     This is an implementation of the conventional VFA fit. It fits a single curve
     :param xvalues: 1D Array with the flip angles
     :param dw_data: 1D Array with signal at different flip angles
     :param bounds: Array with fit bounds ([M0min, T1min],[M0max, T1max])
     :param TR: Repetition time
+    :param p0: initial guess (M0, T1); must lie within bounds
     """
     VFA_minimizer = VFA(TR)
 
     # set bounds
     bounds = ([bounds[0][0], bounds[0][1]],
               [bounds[1][0], bounds[1][1]])
-    params, _ = curve_fit(VFA_minimizer.vfa, xvalues, dw_data, p0=[1, 1], bounds=bounds)
+    params, _ = curve_fit(VFA_minimizer.vfa, xvalues, dw_data, p0=list(p0), bounds=bounds)
 
     # unpack parameters
     M0, T1 = params[0], params[1]

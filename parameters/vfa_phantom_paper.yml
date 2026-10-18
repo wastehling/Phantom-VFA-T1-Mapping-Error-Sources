@@ -1,0 +1,111 @@
+# Reproduces the figures of 'Sources and relative importance of error in VFA T1 mapping in phantoms: B1+ correction and
+# RF spoiling'. Run from the repository root:
+#   python -m scripts.vfa_phantom_paper.fit_phantom_t1 --data_root /path/to/DicomData
+#   python -m scripts.vfa_phantom_paper.make_figures --data_root /path/to/DicomData
+
+# folder with the downloaded DICOM data (see scripts/vfa_phantom_paper/README.md); each exam is found by its patient
+# name (e.g. M_P5_20260518) in the folder name. Can also be set with --data_root on the command line.
+data_root: '/path/to/DicomData'
+output_folder: 'output/vfa_phantom_paper'
+
+fit:
+  n_flip_angles: 6            # VFA series are consecutive series numbers (201, 301, ..., 701)
+  b1_clip: [0.75, 1.25]
+  parameter_ranges:
+    M0: [0, 1.0e+8]
+    T1: [10, 3000]
+  n_jobs: 4
+
+phantoms:
+  GSP:                        # Gold Standard Phantoms MultiSample 120S
+    n_vials: 8
+    n_dropped_vials: 0
+    temperature: 21
+    # VFA slices (0-based, ordered along the slice normal) on which the vial masks are drawn: the three central
+    # slices of the 15-slice VFA slab
+    mask_slices: [6, 7, 8]
+    mask_shrink_px: 2         # mask radius = detected inner vial radius - shrink
+  CM:                         # CaliberMRI Premium System Phantom 130, NiCl2/T1 layer
+    n_vials: 14
+    n_dropped_vials: 4        # the four inner spheres (T1 21-60 ms) are excluded
+    temperature: 21
+    mask_slices: [6, 7, 8]
+    mask_shrink_px: 2
+
+sessions:                     # patient names of the exams
+  GSP_day1: 'M_P5_20260518'
+  GSP_day2: 'M_P5_20260517'
+  CM_day1: 'M_P6_20260518'
+  CM_day2: 'M_P6_20260517'
+
+# per study: session, first VFA series number and B1+ map series number (null: no B1+ correction)
+studies:
+  GSP:
+    AFI:                    {session: GSP_day1, vfa: 201,  b1: 1101}
+    AFI_gradspoil6:         {session: GSP_day1, vfa: 201,  b1: 1201}
+    SDAM_2D:                {session: GSP_day1, vfa: 201,  b1: 801}
+    SDAM_2D_satdelay200ms:  {session: GSP_day1, vfa: 201,  b1: 901}
+    DREAM:                  {session: GSP_day1, vfa: 201,  b1: 1301}
+    DREAM_longTFE:          {session: GSP_day1, vfa: 201,  b1: 1401}
+    NoB1:                   {session: GSP_day1, vfa: 201,  b1: null}
+    AFI_TR20:               {session: GSP_day1, vfa: 1501, b1: 1101}
+    AFI_spoil117:           {session: GSP_day1, vfa: 2101, b1: 1101}
+    AFI_spoil50:            {session: GSP_day1, vfa: 2701, b1: 1101}
+    AFI_Repositioning:      {session: GSP_day1, vfa: 3501, b1: 4101}
+    AFI_Turned:             {session: GSP_day1, vfa: 4401, b1: 5001}
+    NoB1_Turned:            {session: GSP_day1, vfa: 4401, b1: null}
+    AFI_Day2:               {session: GSP_day2, vfa: 201,  b1: 801}
+  CM:
+    AFI:                    {session: CM_day1, vfa: 201,  b1: 1101}
+    AFI_gradspoil6:         {session: CM_day1, vfa: 201,  b1: 1201}
+    SDAM_2D:                {session: CM_day1, vfa: 201,  b1: 801}
+    SDAM_2D_satdelay200ms:  {session: CM_day1, vfa: 201,  b1: 901}
+    DREAM:                  {session: CM_day1, vfa: 201,  b1: 1301}
+    DREAM_longTFE:          {session: CM_day1, vfa: 201,  b1: 1401}
+    NoB1:                   {session: CM_day1, vfa: 201,  b1: null}
+    AFI_TR20:               {session: CM_day1, vfa: 1501, b1: 1101}
+    AFI_spoil117:           {session: CM_day1, vfa: 2101, b1: 1101}
+    AFI_spoil50:            {session: CM_day1, vfa: 2701, b1: 1101}
+    AFI_Repositioning:      {session: CM_day1, vfa: 3501, b1: 4101}
+    AFI_Turned:             {session: CM_day1, vfa: 4401, b1: 5001}
+    NoB1_Turned:            {session: CM_day1, vfa: 4401, b1: null}
+    AFI_Day2:               {session: CM_day2, vfa: 201,  b1: 801}
+
+figures:
+  fig_3_B1_comparison:
+    title: 'B1$^+$-comparison'
+    studies: ['AFI', 'SDAM_2D', 'DREAM', 'NoB1']
+    name_to_show: ['AFI', 'SDAM', 'DREAM', 'No B1 correction']
+    color: ['black', 'blue', 'green', 'red']
+  fig_4_repeatability:
+    title: 'Baseline Repeatability & Reproducibility'
+    studies: ['AFI', 'AFI_Repositioning', 'AFI_Day2']
+    name_to_show: ['Initial scan', 'Rescan (same day)', 'Rescan (second day)']
+    color: ['black', 'blue', 'green']
+  fig_5_positioning:
+    title: 'Phantom Positioning'
+    studies: ['AFI', 'AFI_Turned', 'NoB1', 'NoB1_Turned']
+    name_to_show: ['Initial position', 'Rotated position', 'Initial position, no B1 correction',
+                   'Rotated position, no B1 correction']
+    color: ['black', 'blue', 'green', 'red']
+  fig_6_spoiling:
+    title: 'Spoiling'
+    studies: ['AFI', 'AFI_TR20', 'AFI_spoil117', 'AFI_spoil50']
+    name_to_show: ['Default spoiling (150$^\circ$)', 'TR: 20ms (150$^\circ$)', 'Spoiling: 117$^\circ$',
+                   'Spoiling: 50$^\circ$']
+    color: ['black', 'blue', 'green', 'red']
+  fig_s2_B1_suboptimal_settings:
+    title: 'B$1^+$ Suboptimal Settings'
+    studies: ['AFI_gradspoil6', 'SDAM_2D_satdelay200ms', 'DREAM_longTFE', 'NoB1']
+    name_to_show: ['AFI (reduced gradient strength)', 'SDAM (reduced saturation delay)', 'DREAM (long readout)',
+                   'No B1 correction']
+    color: ['black', 'blue', 'green', 'red']
+
+b1_map_figures:               # B1+ maps shown on the slice of the VFA masks
+  fig_2_B1_maps:
+    studies: ['AFI', 'SDAM_2D', 'DREAM']
+    column_titles: ['AFI', 'SDAM', 'DREAM']
+    arrow_GSP_DREAM: [34, 66]  # (column, row) of the vial with the shortest T1
+  fig_s1_B1_maps_suboptimal:
+    studies: ['AFI_gradspoil6', 'SDAM_2D_satdelay200ms', 'DREAM_longTFE']
+    column_titles: ["AFI \n(reduced gradient strength)", "SDAM \n(reduced saturation delay)", "DREAM \n(long readout)"]

@@ -1,3 +1,10 @@
+**This fork additionally contains the code for the paper *Sources and relative importance of error in VFA T1
+mapping in phantoms: B1+ correction and RF spoiling* (W. Stehling et al., currently in the submission process).
+The DICOM data are available on Zenodo (DOI: [10.5281/zenodo.23450766](https://doi.org/10.5281/zenodo.23450766)).
+See [scripts/vfa_phantom_paper/README.md](scripts/vfa_phantom_paper/README.md) for how to reproduce its figures.**
+
+---
+
 Disclaimer: this software is for research purposes only. Use at your own risk.
 
 Authors: Daan Kuppens, Oliver Gurney-Champion at Amsterdam UMC, The Netherlands
